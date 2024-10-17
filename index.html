@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metin2 GM Commands</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            max-width: 900px;
+            margin: auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        #search-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        #search {
+            width: 100%;
+            max-width: 600px;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1.1em;
+            box-sizing: border-box;
+        }
+        .command-category {
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: #007bff;
+            color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        .panel:hover {
+            background: #0056b3;
+        }
+        .command-list {
+            display: none;
+            list-style-type: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+        .command-list li {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+        .command-list li code {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .command-list li span.description {
+            color: #555;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        .toggle-icon {
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        .panel.warning {
+            background: #dc3545;
+        }
+        .highlight {
+            background-color: #28a745;
+            color: #fff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            #search {
+                width: calc(100% - 30px);
+            }
+        }
+        .dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .dark-mode .container {
+            background: #1e1e1e;
+        }
+        .dark-mode .panel {
+            background: #333;
+        }
+        .dark-mode .panel:hover {
+            background: #555;
+        }
+        .dark-mode .command-list li {
+            background: #2c2c2c;
+        }
+        .dark-mode .command-list li code {
+            background: #3a3a3a;
+        }
+        .dark-mode #search {
+            background: #2c2c2c;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Load previous collapsed state from localStorage
+            const categories = document.querySelectorAll('.command-category');
+            categories.forEach(category => {
+                const categoryId = category.querySelector('.panel').getAttribute('onclick').match(/toggleCommands\('(.*)'\)/)[1];
+                const collapsed = localStorage.getItem(categoryId);
+                if (collapsed === 'false') {
+                    toggleCommands(categoryId, false);
+                }
+            });
+
+            // Load theme from localStorage
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+            }
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+            });
+
+            // Visitor count
+            let visitCount = localStorage.getItem('visitCount');
+            if (!visitCount) {
+                visitCount = 0;
+            }
+            visitCount++;
+            localStorage.setItem('visitCount', visitCount);
+            document.getElementById('visitor-count').textContent = `Visitor count: ${visitCount}`;
+        });
+
+        function toggleCommands(id, toggle = true) {
+            const commandList = document.getElementById(id);
+            const toggleIcon = document.getElementById('toggle-' + id);
+            if (commandList.style.display === 'none' || commandList.style.display === '') {
+                if (toggle) {
+                    commandList.style.display = 'block';
+                    toggleIcon.textContent = '-';
+                    localStorage.setItem(id, 'false');
+                }
+            } else {
+                if (toggle) {
+                    commandList.style.display = 'none';
+                    toggleIcon.textContent = '+';
+                    localStorage.setItem(id, 'true');
+                }
+            }
+        }
+
+        function searchCommands() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const commandLists = document.querySelectorAll('.command-list li');
+            const categories = document.querySelectorAll('.command-category');
+
+            let categoryMatches = {};
+            categories.forEach(category => {
+                const categoryId = category.querySelector('.panel').getAttribute('onclick').match(/toggleCommands\('(.*)'\)/)[1];
+                categoryMatches[categoryId] = 0;
+            });
+
+            commandLists.forEach(command => {
+                const commandText = command.textContent.toLowerCase();
+                if (commandText.includes(query)) {
+                    command.style.display = 'block';
+                    command.classList.add('highlight');
+                    const parentCategory = command.closest('.command-list').id;
+                    categoryMatches[parentCategory]++;
+                } else {
+                    command.style.display = 'none';
+                    command.classList.remove('highlight');
+                }
+            });
+
+            categories.forEach(category => {
+                const panel = category.querySelector('.panel');
+                const categoryId = panel.getAttribute('onclick').match(/toggleCommands\('(.*)'\)/)[1];
+                const matchCount = categoryMatches[categoryId];
+                const toggleIcon = category.querySelector('.toggle-icon');
+
+                if (matchCount > 0) {
+                    panel.classList.add('warning');
+                    toggleIcon.textContent = `(${matchCount}) +`;
+                } else {
+                    panel.classList.remove('warning');
+                    toggleIcon.textContent = '+';
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Metin2 GM Commands</h1>
+        <p>Welcome to the Metin2 GM Commands. Here you can browse through all available GM commands and access them in categories. Use the search function to quickly find a specific command.</p>
+        <div id="search-container">
+            <input type="text" id="search" placeholder="Search command..." onkeyup="searchCommands()">
+        </div>
+        <button id="theme-toggle">Toggle Dark/Light Mode</button>
+
+        <div class="command-category">
+            <div class="panel" onclick="toggleCommands('generalCommands')">
+                General GM Commands <span id="toggle-generalCommands" class="toggle-icon">+</span>
+            </div>
+            <ul id="generalCommands" class="command-list">
+                <li>
+                    <code>/level &lt;LEVEL&gt;</code>
+                    <span class="description">Change your level.</span>
+                </li>
+                <li>
+                    <code>/warp &lt;Name&gt;</code>
+                    <span class="description">Teleport to a player.</span>
+                </li>
+                <li>
+                    <code>/transfer &lt;Name&gt;</code>
+                    <span class="description">Teleport a player to you.</span>
+                </li>
+                <li>
+                    <code>/n &lt;Text&gt;</code>
+                    <span class="description">Send a GM announcement.</span>
+                </li>
+                <li>
+                    <code>/b &lt;Text&gt;</code>
+                    <span class="description">Write an announcement.</span>
+                </li>
+                <li>
+                    <code>/dc &lt;Name&gt;</code>
+                    <span class="description">Kick a player.</span>
+                </li>
+                <li>
+                    <code>/in</code>
+                    <span class="description">Toggle invisibility/visibility.</span>
+                </li>
+                <li>
+                    <code>/r</code>
+                    <span class="description">Restore full HP and SP.</span>
+                </li>
+                <li>
+                    <code>/set &lt;Name&gt; gold &lt;Yang Amount&gt;</code>
+                    <span class="description">Generate Yang.</span>
+                </li>
+                <li>
+                    <code>/set &lt;Name&gt; align &lt;Points&gt;</code>
+                    <span class="description">Set alignment points.</span>
+                </li>
+                <li>
+                    <code>/horse_level &lt;Name&gt; &lt;Level&gt;</code>
+                    <span class="description">Level up a horse.</span>
+                </li>
+                <li>
+                    <code>/mspd &lt;0 - 1000&gt;</code>
+                    <span class="description">Increase movement speed.</span>
+                </li>
+                <li>
+                    <code>/set_maxhp &lt;value&gt;</code>
+                    <span class="description">Increase HP.</span>
+                </li>
+                <li>
+                    <code>/set_maxsp &lt;value&gt;</code>
+                    <span class="description">Increase SP.</span>
+                </li>
+                <li>
+                    <code>/weak</code>
+                    <span class="description">Reduce all mobs in your vicinity to 1 HP.</span>
+                </li>
+                <li>
+                    <code>/a &lt;Name&gt; &lt;Level&gt;</code>
+                    <span class="description">Change another player's level.</span>
+                </li>
+                <li>
+                    <code>/stun &lt;Name&gt;</code>
+                    <span class="description">Stun a player.</span>
+                </li>
+                <li>
+                    <code>/slow &lt;Name&gt;</code>
+                    <span class="description">Slow down a player.</span>
+                </li>
+                <li>
+                    <code>/block_chat &lt;NAME&gt; &lt;time&gt;</code>
+                    <span class="description">Block a player's chat.</span>
+                </li>
+                <li>
+                    <code>/block_chat_list</code>
+                    <span class="description">Show list of blocked players.</span>
+                </li>
+                <li>
+                    <code>/j &lt;player&gt;</code>
+                    <span class="description">Unblock a player's chat.</span>
+                </li>
+                <li>
+                    <code>/gwlist</code>
+                    <span class="description">Show ongoing guild wars.</span>
+                </li>
+                <li>
+                    <code>/gwstop &lt;ID&gt; &lt;ID&gt;</code>
+                    <span class="description">End a guild war.</span>
+                </li>
+                <li>
+                    <code>/reload &lt;q&gt;</code>
+                    <span class="description">Reload NPCs and mobs.</span>
+                </li>
+                <li>
+                    <code>/siege</code>
+                    <span class="description">Start a guild siege.</span>
+                </li>
+                <li>
+                    <code>/reset</code>
+                    <span class="description">Perform server reset.</span>
+                </li>
+                <li>
+                    <code>/gete</code>
+                    <span class="description">Query status of certain functions.</span>
+                </li>
+                <li>
+                    <code>/o</code>
+                    <span class="description">Activate observer mode.</span>
+                </li>
+                <li>
+                    <code>/shoutdown</code>
+                    <span class="description">Server offline.</span>
+                </li>
+                <li>
+                    <code>/x 1</code>
+                    <span class="description">Change time to night.</span>
+                </li>
+                <li>
+                    <code>/x 2</code>
+                    <span class="description">Change time to day.</span>
+                </li>
+                <li>
+                    <code>/xmas_snow 1</code>
+                    <span class="description">Start snow effect.</span>
+                </li>
+                <li>
+                    <code>/xmas_snow 0</code>
+                    <span class="description">Stop snow effect.</span>
+                </li>
+                <li>
+                    <code>/e xmas_tree 1</code>
+                    <span class="description">Add Christmas tree.</span>
+                </li>
+                <li>
+                    <code>/e xmas_tree 0</code>
+                    <span class="description">Remove Christmas tree.</span>
+                </li>
+                <li>
+                    <code>/e xmas_song 1</code>
+                    <span class="description">Add Christmas song.</span>
+                </li>
+                <li>
+                    <code>/e xmas_santa 1</code>
+                    <span class="description">Spawn Santa Claus.</span>
+                </li>
+                <li>
+                    <code>/e xmas_santa 0</code>
+                    <span class="description">Remove Santa Claus.</span>
+                </li>
+                <li>
+                    <code>/ipurge</code>
+                    <span class="description">Clear inventory.</span>
+                </li>
+                <li>
+                    <code>/pull</code>
+                    <span class="description">Attract mobs.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <div class="panel" onclick="toggleCommands('itemMonsterCommands')">
+                Item and Monster Commands <span id="toggle-itemMonsterCommands" class="toggle-icon">+</span>
+            </div>
+            <ul id="itemMonsterCommands" class="command-list">
+                <li>
+                    <code>/item &lt;ItemID&gt; &lt;Amount&gt;</code>
+                    <span class="description">Create an item.</span>
+                </li>
+                <li>
+                    <code>/polyitem &lt;MonsterID&gt;</code>
+                    <span class="description">Create a polymorph orb.</span>
+                </li>
+                <li>
+                    <code>/poly &lt;MonsterID&gt;</code>
+                    <span class="description">Polymorph.</span>
+                </li>
+                <li>
+                    <code>/purge</code>
+                    <span class="description">Remove all monsters and NPCs nearby.</span>
+                </li>
+                <li>
+                    <code>/m &lt;MonsterID&gt; &lt;Amount&gt;</code>
+                    <span class="description">Spawn monsters.</span>
+                </li>
+                <li>
+                    <code>/ma &lt;value mob&gt;</code>
+                    <span class="description">Spawn an aggressive monster.</span>
+                </li>
+                <li>
+                    <code>/mc &lt;value mob&gt;</code>
+                    <span class="description">Spawn a non-aggressive monster.</span>
+                </li>
+                <li>
+                    <code>/mm &lt;value mob&gt;</code>
+                    <span class="description">Spawn a monster or metin at a random point on the map.</span>
+                </li>
+                <li>
+                    <code>/pu</code>
+                    <span class="description">Kill all monsters.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <div class="panel" onclick="toggleCommands('characterStatusCommands')">
+                Character and Status Commands <span id="toggle-characterStatusCommands" class="toggle-icon">+</span>
+            </div>
+            <ul id="characterStatusCommands" class="command-list">
+                <li>
+                    <code>/set_stat &lt;str/int/dex/vit&gt; &lt;value&gt;</code>
+                    <span class="description">Set the specified stat points.</span>
+                </li>
+                <li>
+                    <code>/set_skill &lt;skill_vnum&gt; &lt;level&gt;</code>
+                    <span class="description">Set the level of a specific skill.</span>
+                </li>
+                <li>
+                    <code>/set_hp &lt;value&gt;</code>
+                    <span class="description">Set your character's HP.</span>
+                </li>
+                <li>
+                    <code>/set_mp &lt;value&gt;</code>
+                    <span class="description">Set your character's SP.</span>
+                </li>
+                <li>
+                    <code>/give_gold &lt;amount&gt;</code>
+                    <span class="description">Give yourself the specified amount of Yang.</span>
+                </li>
+                <li>
+                    <code>/set &lt;player&gt; max_hp &lt;amount&gt;</code>
+                    <span class="description">Add HP to a player.</span>
+                </li>
+                <li>
+                    <code>/set &lt;player&gt; max_sp &lt;amount&gt;</code>
+                    <span class="description">Add SP to a player.</span>
+                </li>
+                <li>
+                    <code>/set &lt;PLAYER NAME&gt; exp &lt;EXP&gt;</code>
+                    <span class="description">Modify a player's experience points.</span>
+                </li>
+                <li>
+                    <code>/setskillother &lt;PLAYER NAME&gt; &lt;SKILL VALUE&gt; &lt;LEVEL OF THE SKILL&gt;</code>
+                    <span class="description">Set a skill for another player.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; 2024 by Shay. All rights reserved.<br>
+        <span id="visitor-count"></span>
+    </div>
+</body>
+</html>
